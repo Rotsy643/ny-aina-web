@@ -211,6 +211,34 @@ textarea::placeholder{color:var(--mut)}
   footer{padding:.4rem 1rem .8rem}
 }
 @media (max-width:34rem){.idees{grid-template-columns:1fr}.hero{width:min(100%,17rem)}}
+/* Écrans peu hauts (portables) : tout l'accueil doit tenir sans défiler */
+@media (max-height:760px) and (min-width:56.01rem){
+  .rail{gap:.8rem;padding:1rem}
+  .chaine li{padding:.15rem 0 .5rem}
+  .chaine small{display:none}
+  .histo{min-height:3rem}
+  .hero{width:min(100%,22rem,calc(26vh*1.5));margin-bottom:.2rem}
+  #accueil h1{font-size:clamp(1.9rem,4.4vw,2.8rem);margin-bottom:.4rem}
+  #accueil p{margin-bottom:1rem}
+  .idee{padding:.6rem 2rem .6rem .9rem}
+  .idee small{display:none}
+}
+/* Téléphone : hauteur stable, un seul défilement, historique en menu */
+html{-webkit-text-size-adjust:100%}
+body{overflow:hidden}
+.app{height:100dvh}
+.carte{overflow-wrap:anywhere}
+main{overscroll-behavior:contain}
+.btn.histo-btn{display:none}
+@media (hover:none){.conv .suppr{opacity:.7}}
+@media (max-width:56rem){
+  .rail{position:relative;z-index:5}
+  .btn.histo-btn{display:flex}
+  .histo{display:none;position:absolute;left:.6rem;right:.6rem;top:100%;margin-top:.4rem;z-index:20;
+    max-height:55dvh;overflow-y:auto;padding:.9rem;background:var(--verre-fort);border:1px solid var(--bord);
+    border-radius:1rem;backdrop-filter:blur(18px)}
+  .app.histo-ouvert .histo{display:flex}
+}
 @media (prefers-reduced-motion:reduce){
   *,*::before,*::after{animation:none!important;transition:none!important}
   .hero{transform:none}
@@ -244,6 +272,9 @@ textarea::placeholder{color:var(--mut)}
       <p class="vide-histo" id="videHisto">Tes conversations apparaîtront ici.</p>
     </div>
     <div class="outils">
+      <button class="btn histo-btn" id="ouvrirHisto" type="button" aria-expanded="false" aria-label="Historique des conversations">
+        <svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg><span>Historique</span>
+      </button>
       <button class="btn principal" id="nouveau" type="button">
         <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg><span>Nouvelle conversation</span>
       </button>
@@ -304,6 +335,7 @@ const $ = id => document.getElementById(id);
 const app = $("app"), scene = $("scene"), journal = $("journal"), form = $("form");
 const saisie = $("saisie"), bouton = $("envoyer"), orbeTete = $("orbeTete");
 const calme = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+const focaliser = () => { if (window.matchMedia("(pointer: fine)").matches) saisie.focus(); };
 
 function lire(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
 function ecrire(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
@@ -562,9 +594,13 @@ function afficher(c) {
   } else { app.classList.remove("actif"); }
 }
 
+function fermerHisto() {
+  app.classList.remove("histo-ouvert"); $("ouvrirHisto").setAttribute("aria-expanded", "false");
+}
 function changerSession(id) {
+  fermerHisto();
   sessionId = id; ecrire("nyaina_session", id); montrerSession();
-  afficher(trouver(id)); afficherListe(); saisie.focus();
+  afficher(trouver(id)); afficherListe(); focaliser();
 }
 function ouvrir(id) { if (!bouton.disabled && id !== sessionId) changerSession(id); }
 function supprimer(id) {
@@ -599,7 +635,7 @@ async function envoyer(texte) {
       : e.message, true);
   } finally {
     clearTimeout(minuteur); orbeTete.classList.remove("pense"); app.classList.remove("charge");
-    bouton.disabled = false; saisie.focus();
+    bouton.disabled = false; focaliser();
   }
 }
 
@@ -638,12 +674,16 @@ $("theme").addEventListener("click", () => {
 });
 $("nouveau").addEventListener("click", () => {
   const c = trouver(sessionId);
-  if (!c || !c.messages.length) { saisie.focus(); return; }
+  if (!c || !c.messages.length) { focaliser(); return; }
   changerSession(nouvelId());
+});
+$("ouvrirHisto").addEventListener("click", () => {
+  const ouvert = app.classList.toggle("histo-ouvert");
+  $("ouvrirHisto").setAttribute("aria-expanded", String(ouvert));
 });
 // Au chargement : on reprend la dernière conversation (le session_id est déjà celui du serveur)
 afficher(trouver(sessionId)); afficherListe();
-saisie.focus();
+focaliser();
 </script>
 </body>
 </html>
